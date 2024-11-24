@@ -67,7 +67,7 @@ defmodule CollabarativeCanvasWeb.Canvas do
 
   def render(assigns) do
     ~H"""
-    <canvas id="canvas" width="2000" height="1000" />
+    <canvas class="cursor-none" id="canvas" width="2000" height="1000" />
     <ul class="list-none" id="cursors" phx-hook="TrackClientCursor" data-user-color={@user.color}>
       <%= for user <- @users do %>
         <li
