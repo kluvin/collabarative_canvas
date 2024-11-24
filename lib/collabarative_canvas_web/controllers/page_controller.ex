@@ -9,9 +9,6 @@ defmodule CollabarativeCanvasWeb.PageController do
 
     conn =
       case session do
-        %{"user" => _user} ->
-          conn
-
         _ ->
           conn
           |> put_session(:user, CollabarativeCanvas.Name.generate())
