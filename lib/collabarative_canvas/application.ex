@@ -9,10 +9,12 @@ defmodule CollabarativeCanvas.Application do
   def start(_type, _args) do
     children = [
       CollabarativeCanvasWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:collabarative_canvas, :dns_cluster_query) || :ignore},
+      {DNSCluster,
+       query: Application.get_env(:collabarative_canvas, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: CollabarativeCanvas.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: CollabarativeCanvas.Finch},
+      CollabarativeCanvasWeb.Presence,
       # Start a worker by calling: CollabarativeCanvas.Worker.start_link(arg)
       # {CollabarativeCanvas.Worker, arg},
       # Start to serve requests, typically the last entry
