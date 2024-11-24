@@ -1,4 +1,5 @@
 defmodule CollabarativeCanvasWeb.Canvas do
+  import CollabarativeCanvasWeb.Colors
   alias CollabarativeCanvasWeb.Presence
   use CollabarativeCanvasWeb, :live_view
 
@@ -63,8 +64,9 @@ defmodule CollabarativeCanvasWeb.Canvas do
     ~H"""
     <ul class="list-none" id="cursors" phx-hook="TrackClientCursor">
       <%= for user <- @users do %>
+        <% color = getColor(user.name) %>
         <li
-          style={"color: deeppink; left: #{user.x}%; top: #{user.y}%"}
+          style={"color: #{color}; left: #{user.x}%; top: #{user.y}%"}
           class="flex flex-col absolute pointer-events-none whitespace-nowrap overflow-hidden"
         >
           <svg
@@ -79,7 +81,7 @@ defmodule CollabarativeCanvasWeb.Canvas do
             <polygon fill="currentColor" points="9.2,7.3 9.2,18.5 12.2,15.6 12.6,15.5 17.4,15.5" />
           </svg>
 
-          <span style="background-color: deeppink;" class="mt-1 ml-4 px-1 text-sm text-white">
+          <span style={"color: #{color};"} class="mt-1 ml-4 px-1 text-sm text-white">
             <%= user.name %>
           </span>
         </li>
