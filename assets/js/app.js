@@ -37,8 +37,6 @@ Hooks.TrackClientCursor = {
     ctx.lineJoin = "round";
     ctx.shadowBlur = 1;
     ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-    ctx.strokeStyle = "#000";
-    ctx.strokeStyle = this.el.dataset.userColor
 
     let isDrawing = false;
 
@@ -53,6 +51,7 @@ Hooks.TrackClientCursor = {
     })
 
     const startSegment = ({x, y}) => {
+        ctx.strokeStyle = this.el.dataset.userColor;
       ctx.beginPath();
       ctx.moveTo(x, y);
     }
@@ -61,6 +60,15 @@ Hooks.TrackClientCursor = {
       ctx.lineTo(x, y);
       ctx.stroke();
     }
+
+    const _drawSegment = ({ start, end, color, continuePath = false }) => {
+      ctx.strokeStyle = color;
+      if (!continuePath) {
+        ctx.beginPath();
+      }
+      ctx.moveTo(start.x, start.y);
+      continueSegment(...end)
+    };
 
     canvas.addEventListener("mousedown", (e) => {
       isDrawing = true;
