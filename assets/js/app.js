@@ -42,33 +42,54 @@ Hooks.TrackClientCursor = {
 
     let isDrawing = false;
 
+    const getRelativeCoords = (e) => ({
+      x: (e.pageX / window.innerWidth) * 100,
+      y: (e.pageY / window.innerHeight) * 100
+    })
+
+    const getOffsetCoords = (e) => ({
+      x: e.offsetX,
+      y: e.offsetY
+    })
+
+    const startSegment = ({x, y}) => {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    const continueSegment = ({x, y}) => {
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
     canvas.addEventListener("mousedown", (e) => {
       isDrawing = true;
-      ctx.beginPath();
-      // Start the path
-      ctx.moveTo(e.offsetX, e.offsetY);
+      startSegment(
+        getOffsetCoords(e)
+      )
+      this.pushEvent("start-segment", { ...getRelativeCoords(e) });
     });
 
     canvas.addEventListener("mousemove", (e) => {
       if (isDrawing) {
-        // Draw to the current mouse position
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.stroke();
+        continueSegment(
+          getOffsetCoords(e)
+        )
+        this.pushEvent("continue-segment", {  ...getRelativeCoords(e) });
+
       }
+      this.pushEvent("mouse-move", {  ...getRelativeCoords(e) }
+);
     });
 
     canvas.addEventListener("mouseup", () => {
       isDrawing = false;
+      this.pushEvent("mouse-up")
     });
-
+    
     canvas.addEventListener("mouseleave", () => {
       isDrawing = false;
-    });
-
-    document.addEventListener("mousemove", (e) => {
-      const x = (e.pageX / window.innerWidth) * 100; // in %
-      const y = (e.pageY / window.innerHeight) * 100; // in %
-      this.pushEvent("cursor-move", { x, y, isDrawing });
+      this.pushEvent("mouse-up")
     });
   },
 };

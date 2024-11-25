@@ -38,9 +38,9 @@ defmodule CollabarativeCanvasWeb.Canvas do
     {:ok, socket |> redirect(to: "/")}
   end
 
-  def handle_event("cursor-move", %{"x" => x, "y" => y, "isDrawing" => is_drawing}, socket) do
+  def handle_event("mouse-move", %{"x" => x, "y" => y}, socket) do
     key = socket.id
-    payload = %{x: x, y: y, is_drawing: is_drawing}
+    payload = %{x: x, y: y}
 
     metas =
       Presence.get_by_key(@canvasview, key)[:metas]
@@ -49,6 +49,18 @@ defmodule CollabarativeCanvasWeb.Canvas do
 
     Presence.update(self(), @canvasview, key, metas)
 
+    {:noreply, socket}
+  end
+
+  def handle_event("start-segment", %{"x" => x, "y" => y}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("continue-segment", %{"x" => x, "y" => y}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("mouse-up", _, socket) do
     {:noreply, socket}
   end
 
