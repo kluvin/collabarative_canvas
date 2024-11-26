@@ -9,6 +9,10 @@ export default {
     ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
 
     let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    const userPaths = {};
+    const user = this.el.dataset.userName;
 
     const getRelativeCoords = (e) => ({
       x: (e.pageX / window.innerWidth) * 100,
@@ -30,44 +34,57 @@ export default {
       };
     };
 
-    const startSegment = ({ x, y }, color) => {
-      ctx.strokeStyle = color;
+    const continueSegment = ({ x, y, prevX, prevY }, color) => {
       ctx.beginPath();
-      ctx.moveTo(x, y);
-    };
-
-    const continueSegment = ({ x, y }, color) => {
       ctx.strokeStyle = color;
+      ctx.moveTo(prevX, prevY);
       ctx.lineTo(x, y);
       ctx.stroke();
     };
 
-    this.handleEvent("new-draw-segment", ({ newPath, color, x, y }) => {
+    this.handleEvent("new-draw-segment", ({ newPath, color, x, y, userId }) => {
       const coords = getCanvasCoords({ x, y });
       if (newPath) {
-        startSegment(coords, color);
+        userPaths[userId] = { lastX: coords.x, lastY: coords.y };
       } else {
-        continueSegment(coords, color);
+        const lastCoords = userPaths[userId];
+        if (lastCoords) {
+          continueSegment(
+            { x: coords.x, y: coords.y, prevX: lastCoords.lastX, prevY: lastCoords.lastY },
+            color
+          );
+        }
+        userPaths[userId] = { lastX: coords.x, lastY: coords.y };
       }
     });
 
     canvas.addEventListener("pointerdown", (e) => {
       isDrawing = true;
-      startSegment(getOffsetCoords(e), this.el.dataset.userColor);
+      const coords = getOffsetCoords(e);
+      lastX = coords.x;
+      lastY = coords.y;
       this.pushEvent("draw-segment", {
         ...getRelativeCoords(e),
         newPath: true,
         color: this.el.dataset.userColor,
+        userId: user,
       });
     });
 
     canvas.addEventListener("pointermove", (e) => {
       if (isDrawing) {
-        continueSegment(getOffsetCoords(e), this.el.dataset.userColor);
+        const coords = getOffsetCoords(e);
+        continueSegment(
+          { x: coords.x, y: coords.y, prevX: lastX, prevY: lastY },
+          this.el.dataset.userColor
+        );
+        lastX = coords.x;
+        lastY = coords.y;
         this.pushEvent("draw-segment", {
           ...getRelativeCoords(e),
           newPath: false,
           color: this.el.dataset.userColor,
+          userId: user,
         });
       }
       this.pushEvent("mouse-move", { ...getRelativeCoords(e) });

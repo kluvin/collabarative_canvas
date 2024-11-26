@@ -87,7 +87,13 @@ defmodule CollabarativeCanvasWeb.Canvas do
 
   def render(assigns) do
     ~H"""
-    <div id="canvas-page" phx-hook="Canvas" data-user-color={@user.color}>
+    <div
+      id="canvas-page"
+      class="touch-none"
+      phx-hook="Canvas"
+      data-user-color={@user.color}
+      data-user-name={@user.name}
+    >
       <canvas class="cursor-none" id="canvas" width="2000" height="1000" />
       <ul class="list-none" id="cursors">
         <%= for user <- @users do %>
