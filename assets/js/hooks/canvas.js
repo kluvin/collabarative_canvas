@@ -51,7 +51,7 @@ export default {
       }
     });
 
-    canvas.addEventListener("mousedown", (e) => {
+    canvas.addEventListener("pointerdown", (e) => {
       isDrawing = true;
       startSegment(getOffsetCoords(e), this.el.dataset.userColor);
       this.pushEvent("draw-segment", {
@@ -61,7 +61,7 @@ export default {
       });
     });
 
-    canvas.addEventListener("mousemove", (e) => {
+    canvas.addEventListener("pointermove", (e) => {
       if (isDrawing) {
         continueSegment(getOffsetCoords(e), this.el.dataset.userColor);
         this.pushEvent("draw-segment", {
@@ -73,7 +73,7 @@ export default {
       this.pushEvent("mouse-move", { ...getRelativeCoords(e) });
     });
 
-    canvas.addEventListener("mouseup", () => {
+    canvas.addEventListener("pointerup", () => {
       isDrawing = false;
       this.pushEvent("mouse-up");
     });
