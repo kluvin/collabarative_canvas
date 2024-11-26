@@ -15,6 +15,6 @@ defmodule CollabarativeCanvasWeb.PageController do
           |> configure_session(renew: true)
       end
 
-    render(conn, :home, layout: false)
+    redirect(conn, to: "/canvas")
   end
 end
