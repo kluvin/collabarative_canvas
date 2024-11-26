@@ -11,7 +11,7 @@ defmodule CollabarativeCanvasWeb.Canvas do
         x: 50,
         y: 50,
         name: user,
-        color: getColor(user)
+        color: get_color(user)
       })
 
       CollabarativeCanvasWeb.Endpoint.subscribe(@canvasview)
@@ -27,13 +27,12 @@ defmodule CollabarativeCanvasWeb.Canvas do
       |> assign(:socket_id, socket.id)
       |> assign(:user, %{
         name: user,
-        color: getColor(user)
+        color: get_color(user)
       })
 
     {:ok, updated}
   end
 
-  # if no user name, redirect to root to generate one
   def mount(_params, _session, socket) do
     {:ok, socket |> redirect(to: "/")}
   end
@@ -52,15 +51,24 @@ defmodule CollabarativeCanvasWeb.Canvas do
     {:noreply, socket}
   end
 
-  def handle_event("start-segment", %{"x" => x, "y" => y}, socket) do
-    {:noreply, socket}
-  end
-
-  def handle_event("continue-segment", %{"x" => x, "y" => y}, socket) do
-    {:noreply, socket}
-  end
-
   def handle_event("mouse-up", _, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("draw-segment", params, socket) do
+    CollabarativeCanvasWeb.Endpoint.broadcast_from(
+      self(),
+      @canvasview,
+      "new-draw-segment",
+      params
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%{event: "new-draw-segment", payload: payload}, socket) do
+    socket = push_event(socket, "new-draw-segment", payload)
+
     {:noreply, socket}
   end
 
@@ -79,31 +87,33 @@ defmodule CollabarativeCanvasWeb.Canvas do
 
   def render(assigns) do
     ~H"""
-    <canvas class="cursor-none" id="canvas" width="2000" height="1000" />
-    <ul class="list-none" id="cursors" phx-hook="TrackClientCursor" data-user-color={@user.color}>
-      <%= for user <- @users do %>
-        <li
-          style={"color: #{user.color}; left: #{user.x}%; top: #{user.y}%"}
-          class="flex flex-col absolute pointer-events-none whitespace-nowrap overflow-hidden"
-        >
-          <svg
-            version="1.1"
-            width="25px"
-            height="25px"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            viewBox="0 0 21 21"
+    <div id="canvas-page" phx-hook="Canvas" data-user-color={@user.color}>
+      <canvas class="cursor-none" id="canvas" width="2000" height="1000" />
+      <ul class="list-none" id="cursors">
+        <%= for user <- @users do %>
+          <li
+            style={"color: #{user.color}; left: #{user.x}%; top: #{user.y}%;"}
+            class="flex flex-col absolute pointer-events-none whitespace-nowrap overflow-hidden"
           >
-            <polygon fill="black" points="8.2,20.9 8.2,4.9 19.8,16.5 13,16.5 12.6,16.6" />
-            <polygon fill="currentColor" points="9.2,7.3 9.2,18.5 12.2,15.6 12.6,15.5 17.4,15.5" />
-          </svg>
+            <svg
+              version="1.1"
+              width="25px"
+              height="25px"
+              xmlns="http://www.w3.org/2000/svg"
+              xmlns:xlink="http://www.w3.org/1999/xlink"
+              viewBox="0 0 21 21"
+            >
+              <polygon fill="black" points="8.2,20.9 8.2,4.9 19.8,16.5 13,16.5 12.6,16.6" />
+              <polygon fill="currentColor" points="9.2,7.3 9.2,18.5 12.2,15.6 12.6,15.5 17.4,15.5" />
+            </svg>
 
-          <span style={"color: #{user.color};"} class="mt-1 ml-4 px-1 text-sm text-white">
-            <%= user.name %>
-          </span>
-        </li>
-      <% end %>
-    </ul>
+            <span style={"color: #{user.color};"} class="mt-1 ml-4 px-1 text-sm text-white">
+              <%= user.name %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
     """
   end
 end
