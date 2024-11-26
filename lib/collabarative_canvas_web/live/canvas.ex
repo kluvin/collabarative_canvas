@@ -87,7 +87,7 @@ defmodule CollabarativeCanvasWeb.Canvas do
       data-user-color={@user.color}
       data-user-name={@user.name}
     >
-      <canvas class="cursor-none" id="c" width="2000" height="1000" />
+      <canvas phx-update="ignore" class="cursor-none" id="c" />
       <ul class="list-none" id="cursors">
         <%= for user <- @users do %>
           <li
