@@ -1,6 +1,6 @@
 export default {
   mounted() {
-    const canvas = document.getElementById("canvas");
+    const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
@@ -9,85 +9,80 @@ export default {
     ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
 
     let isDrawing = false;
-    let lastX = 0;
-    let lastY = 0;
+    let start = { x: 0, y: 0 };
     const userPaths = {};
     const user = this.el.dataset.userName;
 
-    const getRelativeCoords = (e) => ({
-      x: (e.pageX / window.innerWidth) * 100,
-      y: (e.pageY / window.innerHeight) * 100,
-    });
-
-    const getOffsetCoords = (e) => ({
-      x: e.offsetX,
-      y: e.offsetY,
-    });
-
-    const getCanvasCoords = ({ x, y }) => {
-      const rect = canvas.getBoundingClientRect();
-      const absX = (x / 100) * window.innerWidth;
-      const absY = (y / 100) * window.innerHeight;
-      return {
-        x: absX - rect.left,
-        y: absY - rect.top,
-      };
-    };
-
-    const continueSegment = ({ x, y, prevX, prevY }, color) => {
+    const drawSegment = (start, stop, color) => {
       ctx.beginPath();
       ctx.strokeStyle = color;
-      ctx.moveTo(prevX, prevY);
-      ctx.lineTo(x, y);
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(stop.x, stop.y);
       ctx.stroke();
     };
 
     this.handleEvent("new-draw-segment", ({ newPath, color, x, y, userId }) => {
+      
+      // Convert relative percentage coordinates (x, y)%
+      // back into absolute canvas coordinates.
+      const getCanvasCoords = ({ x, y }) => {
+        const rect = canvas.getBoundingClientRect();
+        const absX = (x / 100) * window.innerWidth;
+        const absY = (y / 100) * window.innerHeight;
+        return {
+          x: absX - rect.left,
+          y: absY - rect.top,
+        };
+      };
+
       const coords = getCanvasCoords({ x, y });
       if (newPath) {
-        userPaths[userId] = { lastX: coords.x, lastY: coords.y };
+        userPaths[userId] = { x: coords.x, y: coords.y };
       } else {
-        const lastCoords = userPaths[userId];
-        if (lastCoords) {
-          continueSegment(
-            { x: coords.x, y: coords.y, prevX: lastCoords.lastX, prevY: lastCoords.lastY },
+        const prevCoords = userPaths[userId];
+        if (prevCoords) {
+          drawSegment(
+            { x: prevCoords.x, y: prevCoords.y },
+            { x: coords.x, y: coords.y },
             color
           );
         }
-        userPaths[userId] = { lastX: coords.x, lastY: coords.y };
+        userPaths[userId] = { x: coords.x, y: coords.y };
       }
     });
 
     canvas.addEventListener("pointerdown", (e) => {
       isDrawing = true;
-      const coords = getOffsetCoords(e);
-      lastX = coords.x;
-      lastY = coords.y;
-      this.pushEvent("draw-segment", {
-        ...getRelativeCoords(e),
-        newPath: true,
-        color: this.el.dataset.userColor,
-        userId: user,
-      });
+      // e.offsetX and e.offsetY provide the x and y coordinates of the mouse pointer
+      // relative to the position of the padding edge of the target element (the canvas).
+      start = { x: e.offsetX, y: e.offsetY };
     });
 
     canvas.addEventListener("pointermove", (e) => {
+      const relativeCoords = {
+        // Convert the absolute page coordinates of the mouse event to relative coordinates
+        // relative to the viewport size, scaled to a percentage (0-100).
+
+        // window.innerWidth and window.innerHeight represent the full width and height of the viewport.
+        // The resulting x and y values are the percentage positions of the mouse event within the viewport.
+        x: (e.pageX / window.innerWidth) * 100,
+        y: (e.pageY / window.innerHeight) * 100,
+      };
+
       if (isDrawing) {
-        const coords = getOffsetCoords(e);
-        continueSegment(
-          { x: coords.x, y: coords.y, prevX: lastX, prevY: lastY },
-          this.el.dataset.userColor
-        );
-        lastX = coords.x;
-        lastY = coords.y;
+        const stop = { x: e.offsetX, y: e.offsetY };
+        drawSegment(start, stop, this.el.dataset.userColor);
+        start = stop;
         this.pushEvent("draw-segment", {
-          ...getRelativeCoords(e),
+          ...relativeCoords,
           newPath: false,
           color: this.el.dataset.userColor,
           userId: user,
         });
       }
-      this.pushEvent("mouse-move", { ...getRelativeCoords(e) });
+      // This is totally redundant. Right now we're storing the mouse movement in Presence
+      // however, we can just use channels here as well.
+      this.pushEvent("mouse-move", { ...relativeCoords });
     });
 
     canvas.addEventListener("pointerup", () => {

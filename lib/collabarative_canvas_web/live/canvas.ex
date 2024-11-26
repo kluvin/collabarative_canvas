@@ -3,31 +3,32 @@ defmodule CollabarativeCanvasWeb.Canvas do
   alias CollabarativeCanvasWeb.Presence
   use CollabarativeCanvasWeb, :live_view
 
-  @canvasview "canvasview"
+  @topic "canvasview"
   def mount(_params, %{"user" => user}, socket) do
+    color = get_color(user)
+
     if connected?(socket) do
-      Presence.track(self(), @canvasview, socket.id, %{
+      Presence.track(self(), @topic, socket.id, %{
         socket_id: socket.id,
+        # x, y should be retrieved from client on connect.\
+        # the next props should ideally be one object
         x: 50,
         y: 50,
         name: user,
-        color: get_color(user)
+        color: color
       })
 
-      CollabarativeCanvasWeb.Endpoint.subscribe(@canvasview)
+      CollabarativeCanvasWeb.Endpoint.subscribe(@topic)
     end
 
-    initial_users =
-      Presence.list(@canvasview)
-      |> Enum.map(fn {_, data} -> data[:metas] |> List.first() end)
-
     updated =
-      socket
-      |> assign(:users, initial_users)
-      |> assign(:socket_id, socket.id)
-      |> assign(:user, %{
-        name: user,
-        color: get_color(user)
+      assign(socket, %{
+        users: list_users(),
+        socket_id: socket.id,
+        user: %{
+          name: user,
+          color: color
+        }
       })
 
     {:ok, updated}
@@ -37,16 +38,17 @@ defmodule CollabarativeCanvasWeb.Canvas do
     {:ok, socket |> redirect(to: "/")}
   end
 
-  def handle_event("mouse-move", %{"x" => x, "y" => y}, socket) do
-    key = socket.id
-    payload = %{x: x, y: y}
-
+  def handle_event("mouse-move", params, socket) do
     metas =
-      Presence.get_by_key(@canvasview, key)[:metas]
-      |> List.first()
-      |> Map.merge(payload)
+      Presence.get_by_key(@topic, socket.id)[:metas]
+      |> hd
+      |> Map.merge(
+        Map.new(params, fn {k, v} ->
+          {String.to_existing_atom(k), v}
+        end)
+      )
 
-    Presence.update(self(), @canvasview, key, metas)
+    Presence.update(self(), @topic, socket.id, metas)
 
     {:noreply, socket}
   end
@@ -58,7 +60,7 @@ defmodule CollabarativeCanvasWeb.Canvas do
   def handle_event("draw-segment", params, socket) do
     CollabarativeCanvasWeb.Endpoint.broadcast_from(
       self(),
-      @canvasview,
+      @topic,
       "new-draw-segment",
       params
     )
@@ -68,21 +70,12 @@ defmodule CollabarativeCanvasWeb.Canvas do
 
   def handle_info(%{event: "new-draw-segment", payload: payload}, socket) do
     socket = push_event(socket, "new-draw-segment", payload)
-
     {:noreply, socket}
   end
 
   def handle_info(%{event: "presence_diff", payload: _payload}, socket) do
-    users =
-      Presence.list(@canvasview)
-      |> Enum.map(fn {_, data} -> data[:metas] |> List.first() end)
-
-    updated =
-      socket
-      |> assign(users: users)
-      |> assign(socket_id: socket.id)
-
-    {:noreply, updated}
+    socket = assign(socket, users: list_users())
+    {:noreply, socket}
   end
 
   def render(assigns) do
@@ -94,7 +87,7 @@ defmodule CollabarativeCanvasWeb.Canvas do
       data-user-color={@user.color}
       data-user-name={@user.name}
     >
-      <canvas class="cursor-none" id="canvas" width="2000" height="1000" />
+      <canvas class="cursor-none" id="c" width="2000" height="1000" />
       <ul class="list-none" id="cursors">
         <%= for user <- @users do %>
           <li
@@ -121,5 +114,10 @@ defmodule CollabarativeCanvasWeb.Canvas do
       </ul>
     </div>
     """
+  end
+
+  defp list_users do
+    Presence.list(@topic)
+    |> Enum.map(fn {_, data} -> hd(data.metas) end)
   end
 end
