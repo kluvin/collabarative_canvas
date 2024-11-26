@@ -15,19 +15,19 @@ export default {
     initializeContext();
 
     let isDrawing = false;
-    let start = null;
-    const user = this.el.dataset.userName;
-    const userColor = this.el.dataset.userColor;
+    const userId = this.el.dataset.userName;
+    let relStart = null;
+    const color = this.el.dataset.userColor;
     const editLog = [];
 
-    const drawSegment = (start, stop, color) => {
-      const startCoords = getCanvasCoords(canvas, start);
-      const stopCoords = getCanvasCoords(canvas, stop);
+    const drawSegment = ({ relStart, relStop, color }) => {
+      const absStart = getCanvasCoords(canvas, relStart);
+      const absStop = getCanvasCoords(canvas, relStop);
 
       ctx.beginPath();
       ctx.strokeStyle = color;
-      ctx.moveTo(startCoords.x, startCoords.y);
-      ctx.lineTo(stopCoords.x, stopCoords.y);
+      ctx.moveTo(absStart.x, absStart.y);
+      ctx.lineTo(absStop.x, absStop.y);
       ctx.stroke();
     };
 
@@ -36,50 +36,53 @@ export default {
       canvas.height = window.innerHeight;
       initializeContext();
 
-      editLog.forEach(({ start, stop, color }) => {
-        drawSegment(start, stop, color);
-      });
+      editLog.forEach(drawSegment);
     };
 
     resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
 
-    this.handleEvent("new-draw-segment", ({ color, start, stop, _userId }) => {
-      drawSegment(start, stop, color);
-      editLog.push({ start, stop, color });
-    });
+    const handleNewDrawSegment = (segment) => {
+      drawSegment(segment);
+      editLog.push(segment);
+    };
 
-    canvas.addEventListener("pointerdown", (e) => {
+    const handlePointerDown = (e) => {
       isDrawing = true;
-      start = getPercentageCoords(canvas, { x: e.clientX, y: e.clientY });
-    });
+      relStart = getPercentageCoords(canvas, { x: e.clientX, y: e.clientY });
+    };
 
-    canvas.addEventListener("pointermove", (e) => {
-      const stop = getPercentageCoords(canvas, { x: e.clientX, y: e.clientY });
+    const handlePointerMove = (e) => {
+      const relStop = getPercentageCoords(canvas, {
+        x: e.clientX,
+        y: e.clientY,
+      });
 
       if (isDrawing) {
-        drawSegment(start, stop, userColor);
-        editLog.push({ start, stop, color: userColor });
+        const segment = { relStart, relStop, color };
+        drawSegment(segment);
+        editLog.push(segment);
 
         this.pushEvent("draw-segment", {
-          start,
-          stop,
-          color: userColor,
-          userId: user,
+          relStart,
+          relStop,
+          color,
+          userId,
         });
 
-        start = stop;
+        relStart = relStop;
       }
 
-      this.pushEvent("mouse-move", {
-        x: stop.x,
-        y: stop.y,
-      });
-    });
+      this.pushEvent("mouse-move", relStop);
+    };
 
-    canvas.addEventListener("pointerup", () => {
+    const handlePointerUp = () => {
       isDrawing = false;
       this.pushEvent("mouse-up");
-    });
+    };
+
+    this.handleEvent("new-draw-segment", handleNewDrawSegment);
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerUp);
   },
 };
